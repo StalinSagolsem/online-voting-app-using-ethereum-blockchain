@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vote for Candidates</title>
+    <style>
+      /* Global styles */
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f5f5f5;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+      .container {
+        max-width: 600px;
+        padding: 20px;
+        background-color: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+      h1,
+      h2 {
+        color: #333333;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 10px;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        background-color: #007bff;
+        color: #ffffff;
+        transition: background-color 0.3s ease;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+        text-align: left;
+      }
+      li {
+        padding: 10px;
+        margin-bottom: 5px;
+        background-color: #f0f0f0;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Vote for Candidates</h1>
+
+      <div id="candidateListContainer">
+        <h2>Candidates</h2>
+        <ul id="candidateList"></ul>
+      </div>
+
+      <div id="votingSection" style="display: none">
+        <h2>Cast Your Vote</h2>
+        <input
+          type="text"
+          id="voterID"
+          placeholder="Enter your voter ID"
+        /><br /><br />
+        <input
+          type="text"
+          id="candidateId"
+          placeholder="Enter candidate ID"
+        /><br /><br />
+        <button onclick="castVote()">Cast Vote</button>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+    <script>
+      window.addEventListener("load", async () => {
+        const ganacheEndpoint = "http://localhost:8545";
+        const provider = new Web3.providers.HttpProvider(ganacheEndpoint);
+        const web3 = new Web3(provider);
+
+        const contractAddress = "0x475bC025b6D7847fEC3d73e79653a608992b35b5";
+        const contractABI = [
+          {
+            inputs: [
+              {
+                internalType: "string",
+                name: "_candidateName",
+                type: "string",
+              },
+            ],
+            name: "addCandidates",
+            outputs: [],
+            stateMutability: "nonpayable",
+            type: "function",
+          },
+          {
+            inputs: [
+              {
+                internalType: "uint256",
+                name: "_voterId",
+                type: "uint256",
+              },
+              {
+                internalType: "string",
+                name: "_voterName",
+                type: "string",
+              },
+            ],
+            name: "addVoters",
+            outputs: [],
+            stateMutability: "nonpayable",
+            type: "function",
+          },
+          {
+            inputs: [],
+            name: "startVoting",
+            outputs: [],
+            stateMutability: "nonpayable",
+            type: "function",
+          },
+          {
+            inputs: [],
+            name: "stopVoting",
+            outputs: [],
+            stateMutability: "nonpayable",
+            type: "function",
+          },
+          {
+            inputs: [],
+            stateMutability: "nonpayable",
+            type: "constructor",
+          },
+          {
+            inputs: [
+              {
+                internalType: "int256",
+                name: "voterId",
+                type: "int256",
+              },
+              {
+                internalType: "int256",
+                name: "candidateId",
+                type: "int256",
+              },
+            ],
+            name: "vote",
+            outputs: [],
+            stateMutability: "nonpayable",
+            type: "function",
+          },
+          {
+            inputs: [],
+            name: "getCandidateResults",
+            outputs: [
+              {
+                internalType: "uint256[]",
+                name: "",
+                type: "uint256[]",
+              },
+              {
+                internalType: "string[]",
+                name: "",
+                type: "string[]",
+              },
+              {
+                internalType: "int256[]",
+                name: "",
+                type: "int256[]",
+              },
+            ],
+            stateMutability: "view",
+            type: "function",
+          },
+          {
+            inputs: [],
+            name: "getCandidates",
+            outputs: [
+              {
+                internalType: "int256[]",
+                name: "",
+                type: "int256[]",
+              },
+              {
+                internalType: "string[]",
+                name: "",
+                type: "string[]",
+              },
+            ],
+            stateMutability: "view",
+            type: "function",
+          },
+          {
+            inputs: [],
+            name: "getNoOfCandidate",
+            outputs: [
+              {
+                internalType: "uint256",
+                name: "",
+                type: "uint256",
+              },
+            ],
+            stateMutability: "view",
+            type: "function",
+          },
+          {
+            inputs: [],
+            name: "getResult",
+            outputs: [
+              {
+                internalType: "string",
+                name: "",
+                type: "string",
+              },
+              {
+                internalType: "int256",
+                name: "",
+                type: "int256",
+              },
+            ],
+            stateMutability: "view",
+            type: "function",
+          },
+          {
+            inputs: [],
+            name: "isStarted",
+            outputs: [
+              {
+                internalType: "bool",
+                name: "",
+                type: "bool",
+              },
+            ],
+            stateMutability: "view",
+            type: "function",
+          },
+        ];
+
+        const contract = new web3.eth.Contract(contractABI, contractAddress);
+
+        const candidateListContainer = document.getElementById("candidateList");
+        const votingSection = document.getElementById("votingSection");
+
+        // Function to list candidates
+        async function listCandidates() {
+          const result = await contract.methods.getCandidates().call();
+          const candidateIds = result[0];
+          const candidateNames = result[1];
+
+          candidateListContainer.innerHTML = ""; // Clear previous list
+
+          candidateIds.forEach((id, index) => {
+            const li = document.createElement("li");
+            li.textContent = `${id} - ${candidateNames[index]}`;
+            candidateListContainer.appendChild(li);
+          });
+
+          // Show voting section once candidates are listed
+          votingSection.style.display = "block";
+        }
+
+        // Function to cast a vote
+        window.castVote = async function () {
+          const voterID = document.getElementById("voterID").value;
+          const candidateId = document.getElementById("candidateId").value;
+          if (!voterID || !candidateId) {
+            alert("Please enter your voter ID and candidate ID.");
+            return;
+          }
+
+          // Cast the vote using smart contract method
+          await contract.methods
+            .vote(parseInt(voterID), parseInt(candidateId))
+            .send({
+              from: "0xb5cCDB95a8E2525B964222CdC38464531ABcdD8B",
+              gas: 3000000,
+            });
+
+          console.log("Vote casted");
+          alert(
+            `Voter "${voterID}" cast vote for candidate with ID ${candidateId} successfully!`
+          );
+          document.getElementById("voterID").value = "";
+          document.getElementById("candidateId").value = "";
+        };
+
+        // Function to display voting results
+
+        // Check if voting has started to show candidates
+        const isVotingStarted = await contract.methods.isStarted().call();
+        if (isVotingStarted) {
+          await listCandidates();
+        } else {
+          alert(
+            "Voting has not started yet. Please wait for the admin to start the voting process."
+          );
+        }
+        // Voting has not started, show results (assuming voting has ended)
+        const resultContainer = document.createElement("div");
+        resultContainer.className = "container";
+        resultContainer.style.marginTop = "20px";
+
+        // Display voting results
+        const resultTitle = document.createElement("h2");
+        resultTitle.textContent = "Voting Results";
+        resultContainer.appendChild(resultTitle);
+
+        const resultList = document.createElement("ul");
+        resultContainer.appendChild(resultList);
+
+        const result = await contract.methods.getCandidateResults().call();
+        const candidateIds = result[0];
+        const candidateNames = result[1];
+        const voteCounts = result[2];
+
+        candidateNames.forEach((name, index) => {
+          const li = document.createElement("li");
+          li.textContent = `${name} (Candidate ID: ${candidateIds[index]}) - Votes: ${voteCounts[index]}`;
+          resultList.appendChild(li);
+        });
+
+        document.body.appendChild(resultContainer);
+      });
+    </script>
+  </body>
+</html>
