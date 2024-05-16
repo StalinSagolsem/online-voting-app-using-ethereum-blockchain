@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Voting System Admin Page</title>
+    <style>
+      input::placeholder {
+        color: rgba(255, 255, 224, 0.8); /* Light gray color */
+      }
+      body {
+        font-family: Arial, sans-serif;
+        background-image: url("Designer.png");
+        background-size: cover;
+        background-position: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+
+      .container {
+        background-color: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(10px);
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+        text-align: center;
+        max-width: 600px;
+        width: 100%;
+      }
+
+      h1 {
+        color: #fff;
+        text-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        margin-bottom: 20px;
+      }
+      h2 {
+        color: #fff;
+        text-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+      }
+
+      input,
+      button {
+        margin: 5px;
+        padding: 5px 10px;
+        border-radius: 5px;
+        border: none;
+        background-color: rgba(255, 255, 255, 0.3);
+        color: #fff;
+        font-size: 16px;
+      }
+
+      button {
+        background-color: rgba(255, 255, 255, 0.2);
+        cursor: pointer;
+        transition: background-color 0.3s;
+        font-weight: bold;
+      }
+
+      button:hover {
+        background-color: rgba(255, 255, 255, 0.4);
+      }
+
+      ul {
+        list-style-type: none;
+        padding: 0;
+        text-align: left;
+        color: #fff;
+        text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+      }
+
+      li {
+        margin: 5px 0;
+      }
+      .candidate-list-container {
+        text-align: center;
+        margin-top: 10px;
+      }
+
+      #candidateList {
+        display: inline-block;
+        text-align: left;
+      }
+      #resultList {
+        display: inline-block;
+        text-align: left;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Voting System Admin Page</h1>
+
+      <div>
+        <h2>Add Candidate</h2>
+        <input
+          type="text"
+          id="candidateName"
+          placeholder="Enter candidate name"
+        />
+        <button onclick="addCandidate()">Add Candidate</button>
+      </div>
+
+      <button onclick="showCandidateList()">List of Candidates</button>
+      <div class="candidate-list-container">
+        <ul id="candidateList"></ul>
+      </div>
+
+      <div>
+        <h2>Add Voter</h2>
+        <input type="text" id="voterID" placeholder="Enter voter ID" />
+        <input type="text" id="voterName" placeholder="Enter voter name" />
+        <button onclick="addVoter()">Add Voter</button>
+        <ul id="voterList"></ul>
+      </div>
+
+      <button onclick="startVoting()">Start Voting</button>
+      <button onclick="stopVoting()">Stop Voting</button>
+      <button onclick="isStarted()">Is Started</button>
+
+      <!-- Voting Results Section -->
+      <div class="candidate-list-container">
+        <h2>Voting Results</h2>
+        <ul id="resultList"></ul>
+      </div>
+
+      <div>
+        <button onclick="showResult()">Result</button>
+        <button onclick="showWinner()">Winner</button>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+
+    <script>
+      window.addEventListener("load", async () => {
+        // Connect to Ganache (replace with your actual Ganache endpoint)
+        const ganacheEndpoint = "http://localhost:8545";
+        const provider = new Web3.providers.HttpProvider(ganacheEndpoint);
+        const web3WithGanache = new Web3(provider);
+
+        // Replace with your contract address and ABI
+        const contractAddress = "0x475bC025b6D7847fEC3d73e79653a608992b35b5";
+        const contractABI = [
+          {
+            inputs: [
+              {
+                internalType: "string",
+                name: "_candidateName",
+                type: "string",
+              },
+            ],
+            name: "addCandidates",
+            outputs: [],
+            stateMutability: "nonpayable",
+            type: "function",
+          },
+          {
+            inputs: [
+              {
+                internalType: "uint256",
+                name: "_voterId",
+                type: "uint256",
+              },
+              {
+                internalType: "string",
+                name: "_voterName",
+                type: "string",
+              },
+            ],
+            name: "addVoters",
+            outputs: [],
+            stateMutability: "nonpayable",
+            type: "function",
+          },
+          {
+            inputs: [],
+            name: "startVoting",
+            outputs: [],
+            stateMutability: "nonpayable",
+            type: "function",
+          },
+          {
+            inputs: [],
+            name: "stopVoting",
+            outputs: [],
+            stateMutability: "nonpayable",
+            type: "function",
+          },
+          {
+            inputs: [],
+            stateMutability: "nonpayable",
+            type: "constructor",
+          },
+          {
+            inputs: [
+              {
+                internalType: "int256",
+                name: "voterId",
+                type: "int256",
+              },
+              {
+                internalType: "int256",
+                name: "candidateId",
+                type: "int256",
+              },
+            ],
+            name: "vote",
+            outputs: [],
+            stateMutability: "nonpayable",
+            type: "function",
+          },
+          {
+            inputs: [],
+            name: "getCandidateResults",
+            outputs: [
+              {
+                internalType: "uint256[]",
+                name: "",
+                type: "uint256[]",
+              },
+              {
+                internalType: "string[]",
+                name: "",
+                type: "string[]",
+              },
+              {
+                internalType: "int256[]",
+                name: "",
+                type: "int256[]",
+              },
+            ],
+            stateMutability: "view",
+            type: "function",
+          },
+          {
+            inputs: [],
+            name: "getCandidates",
+            outputs: [
+              {
+                internalType: "int256[]",
+                name: "",
+                type: "int256[]",
+              },
+              {
+                internalType: "string[]",
+                name: "",
+                type: "string[]",
+              },
+            ],
+            stateMutability: "view",
+            type: "function",
+          },
+          {
+            inputs: [],
+            name: "getNoOfCandidate",
+            outputs: [
+              {
+                internalType: "uint256",
+                name: "",
+                type: "uint256",
+              },
+            ],
+            stateMutability: "view",
+            type: "function",
+          },
+          {
+            inputs: [],
+            name: "getResult",
+            outputs: [
+              {
+                internalType: "string",
+                name: "",
+                type: "string",
+              },
+              {
+                internalType: "int256",
+                name: "",
+                type: "int256",
+              },
+            ],
+            stateMutability: "view",
+            type: "function",
+          },
+          {
+            inputs: [],
+            name: "isStarted",
+            outputs: [
+              {
+                internalType: "bool",
+                name: "",
+                type: "bool",
+              },
+            ],
+            stateMutability: "view",
+            type: "function",
+          },
+        ];
+
+        // Create an instance of the contract
+        const myContract = new web3WithGanache.eth.Contract(
+          contractABI,
+          contractAddress
+        );
+
+        // Function to add a candidate
+        window.addCandidate = async function () {
+          const candidateName = document.getElementById("candidateName").value;
+          if (candidateName === "") {
+            alert("Please enter a valid candidate name.");
+            return;
+          }
+          await myContract.methods
+            .addCandidates(candidateName)
+            .send({ from: "0xb5cCDB95a8E2525B964222CdC38464531ABcdD8B" });
+          console.log("Candidate added:", candidateName);
+          alert(`Candidate "${candidateName}" has been added.`);
+          document.getElementById("candidateName").value = "";
+          document.getElementById("candidateName").placeholder =
+            "Enter candidate name";
+        };
+
+        // Function to show the list of candidates
+        window.showCandidateList = async function () {
+          const result = await myContract.methods.getCandidates().call();
+          const candidateIds = result[0];
+          const candidateNames = result[1];
+          const candidateList = document.getElementById("candidateList");
+          candidateList.innerHTML = "";
+          for (let i = 0; i < candidateIds.length; i++) {
+            const li = document.createElement("li");
+            li.textContent = `${candidateIds[i]} - ${candidateNames[i]}`;
+            candidateList.appendChild(li);
+          }
+        };
+
+        // Function to add a voter
+        window.addVoter = async function () {
+          const voterID = document.getElementById("voterID").value;
+          const voterName = document.getElementById("voterName").value;
+          if (voterID === "" || voterName === "") {
+            alert("Please enter both voter ID and voter name.");
+            return;
+          }
+          await myContract.methods
+            .addVoters(voterID, voterName)
+            .send({ from: "0xb5cCDB95a8E2525B964222CdC38464531ABcdD8B" });
+          console.log("Voter added:", voterID, voterName);
+          alert(`Voter "${voterName}" with ID ${voterID} has been added.`);
+          document.getElementById("voterID").value = "";
+          document.getElementById("voterName").value = "";
+          document.getElementById("voterID").placeholder = "Enter voter ID";
+          document.getElementById("voterName").placeholder = "Enter voter name";
+        };
+
+        // Function to start voting
+        window.startVoting = async function () {
+          const isVotingStarted = await myContract.methods.isStarted().call();
+          if (isVotingStarted) {
+            // If voting has already started, show confirmation alert
+            alert("Voting has been started again.");
+          } else {
+            // If voting has not started, proceed to start voting
+            await myContract.methods
+              .startVoting()
+              .send({ from: "0xb5cCDB95a8E2525B964222CdC38464531ABcdD8B" });
+            console.log("Voting started");
+            alert("Voting will now start.");
+          }
+        };
+
+        // Function to stop voting
+        window.stopVoting = async function () {
+          const isVotingStarted = await myContract.methods.isStarted().call();
+          if (!isVotingStarted) {
+            // If voting has not started, show confirmation alert
+            alert("Voting has not started yet.");
+          } else {
+            // If voting has started, proceed to stop voting
+            await myContract.methods
+              .stopVoting()
+              .send({ from: "0xb5cCDB95a8E2525B964222CdC38464531ABcdD8B" });
+            console.log("Voting stopped");
+            alert("Voting has been stopped.");
+          }
+        };
+
+        window.isStarted = async function () {
+          const isStartedValue = await myContract.methods.isStarted().call();
+          console.log("Is voting started?", isStartedValue);
+          if (isStartedValue) {
+            alert("Voting has started.");
+          } else {
+            alert("Voting has either completed or not started yet.");
+          }
+        };
+
+        // Function to display voting results
+        window.showResult = async function () {
+          const result = await myContract.methods.getCandidateResults().call();
+          const candidateIds = result[0];
+          const candidateNames = result[1];
+          const voteCounts = result[2];
+
+          const resultList = document.getElementById("resultList");
+          resultList.innerHTML = ""; // Clear previous results
+
+          for (let i = 0; i < candidateIds.length; i++) {
+            const li = document.createElement("li");
+            li.textContent = `${candidateNames[i]} with candidate ID ${candidateIds[i]} got ${voteCounts[i]} votes`;
+            resultList.appendChild(li);
+          }
+        };
+
+        // Function to display winner
+        window.showWinner = async function () {
+          const result = await myContract.methods.getResult().call();
+          const winnerName = result[0];
+          const winnerVotes = result[1];
+
+          const winnerContainer = document.getElementById("resultList");
+          winnerContainer.innerHTML = ""; // Clear previous winner display
+
+          const li = document.createElement("li");
+          li.textContent = `Winner: ${winnerName} with ${winnerVotes} votes`;
+          winnerContainer.appendChild(li);
+        };
+        // Check if voting has ended to display results
+        const isVotingEnded = !(await contract.methods.isStarted().call());
+        if (isVotingEnded) {
+          await displayResults();
+        }
+      });
+    </script>
+  </body>
+</html>
